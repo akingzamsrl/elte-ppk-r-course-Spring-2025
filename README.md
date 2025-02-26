@@ -1,5 +1,3 @@
-# elte-ppk-r-course-Spring-2025
-
 # Assignment guide
 ## General information
 This is a guide that explains how you should submit your assignments. Please read it before you start working on your assignments, this way you can save a lot of time for yourself. If you have any more question after reading this guide please write Jennifer Nadasdy at nadasdy.jennifer@ppk.elte.hu.
