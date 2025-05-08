@@ -1,6 +1,6 @@
 ---
 title: "Assignment 1: The cocktail bar (data transformation and manipulation)"
-author: "Tamas Nagy"
+author: "Achilles Gwapo"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -33,6 +33,17 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 
 ```{r}
 
+setwd("/Users/achillesisidore/Documents/StatProg/elte-ppk-r-course-Spring-2025/assignments")
+
+# Set the file path
+file_path <- "cocktail_data.tsv"
+print(file_path)
+
+# Read the TSV file
+cocktail_data <- read.delim(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# View the first few rows
+head(cocktail_data)
 ```
 
 ## 2. Transform the data table and clean the ingredient variable!
@@ -40,6 +51,22 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
+library(tidyverse)
+
+cocktail_data <- read.delim("cocktail_data.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+## Separate ingredients into multiple rows
+cocktail_long <- cocktail_data %>%
+  separate_rows(ingredients, sep = "<br/>") %>% 
+  separate_rows(ingredients, sep = "<br>") %>%
+  separate_rows(ingredients, sep = "<b4/>") %>%
+  mutate(ingredients = str_remove_all(ingredients, "\\(\\s*\\d+(\\.\\d+)?\\s*% abv\\s*\\)")) %>%  
+  mutate(ingredients = str_remove_all(ingredients, "^\\s*(\\d+\\s+)?\\d*/\\d+\\s*")) %>%  
+  mutate(ingredients = str_remove_all(ingredients, "^\\s*\\d+(\\.\\d+)?\\s*")) %>%  
+  mutate(ingredients = str_remove_all(ingredients, "^(oz|ml|cl|parts?|dashes?|tsp)\\s*")) %>% 
+  mutate(ingredients = str_trim(ingredients))
+
+view(cocktail_long)
 
 ```
 
@@ -48,6 +75,15 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
+##Get unique ingredients in alphabetical order
+ingredient_list <- cocktail_long %>%
+  distinct(ingredients) %>%
+  filter(ingredients != "") %>%
+  mutate(sort_key = tolower(ingredients)) %>%  
+  arrange(sort_key) %>%
+  select(ingredients)
+
+view(ingredient_list)
 
 ```
 
@@ -56,6 +92,12 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 How many different ingredients you will need?
 
 ```{r}
+##Count number of unique ingredients
+unique_ing <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  summarise(unique_count = n_distinct(ingredients))
+
+view(unique_ing)
 
 ```
 
@@ -64,6 +106,27 @@ How many different ingredients you will need?
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+##Count occurrences of each ingredient
+ingredient_count <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  count(ingredients, sort = TRUE)
+
+view(ingredient_count)
+
+##10th highest frequency
+ten_high_freq <- ingredient_count %>%
+  slice(10) %>%
+  pull(n)
+
+view(ten_high_freq)
+
+#Include all ingredients with frequency >= that of the 10th
+top_ingredients <- ingredient_count %>%
+  filter(n >= ten_high_freq)
+
+view(top_ingredients)
+
+
 
 ```
 
@@ -72,6 +135,25 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+##Count ingredients per cocktail
+cocktail_ingredient_counts <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  group_by(name) %>%
+  summarise(num_ingredients = n()) %>%
+  ungroup()
+
+view(cocktail_ingredient_counts)
+
+##Find the max number of ingredients
+max_ingredient_count <- max(cocktail_ingredient_counts$num_ingredients)
+
+view(max_ingredient_count)
+
+##Filter cocktails with the max count
+cocktails_with_most_ingredients <- cocktail_ingredient_counts %>%
+  filter(num_ingredients == max_ingredient_count)
+
+view(cocktails_with_most_ingredients)
 
 ```
 
@@ -81,18 +163,63 @@ Count all cocktails with only one ingredient, and
 
 ```{r}
 
+##Count how many unique cocktails each ingredient appears in
+ingredient_cocktail_counts <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  distinct(name, ingredients) %>%
+  count(ingredients)
+
+##Filter ingredients that appear in only one cocktail
+rare_ingredients <- ingredient_cocktail_counts %>%
+  filter(n == 1)
+
+##Count of rare ingredients
+num_rare_ingredients <- nrow(rare_ingredients)
+
+view(num_rare_ingredients)
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
 
+##Get ingredients that appear in only one cocktail
+rare_ingredients <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  distinct(name, ingredients) %>%
+  count(ingredients) %>%
+  filter(n == 1)
+
+##Join to original long data to find which cocktails use them
+cocktails_with_rare_ingredient <- cocktail_long %>%
+  filter(ingredients %in% rare_ingredients$ingredients) %>%
+  distinct(name)
+
+view(cocktails_with_rare_ingredient)
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+##Identify rare ingredients (used in only one cocktail)
+rare_ingredients <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  distinct(name, ingredients) %>%
+  count(ingredients) %>%
+  filter(n == 1)
+
+##Get cocktails that contain rare ingredients
+cocktails_with_rare <- cocktail_long %>%
+  filter(ingredients %in% rare_ingredients$ingredients) %>%
+  distinct(name)
+
+##Filter out those cocktails to get the rest
+cocktails_without_rare <- cocktail_long %>%
+  distinct(name) %>%
+  filter(!(name %in% cocktails_with_rare$name))
+
+view(cocktails_without_rare)
+
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -109,6 +236,19 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 
 ```{r}
 
+##Create the bartender cheat sheet matrix
+bartender_cheat_sheet <- cocktail_long %>%
+  filter(ingredients != "") %>%
+  distinct(name, ingredients) %>%
+  mutate(value = "X") %>% 
+  pivot_wider(
+    names_from = ingredients,
+    values_from = value,
+    values_fill = list(value = "")
+  )
+
+print(bartender_cheat_sheet)
+view(bartender_cheat_sheet)
 ```
 
 
