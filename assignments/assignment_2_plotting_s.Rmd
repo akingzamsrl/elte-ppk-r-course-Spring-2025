@@ -1,6 +1,6 @@
 ---
 title: 'Assignment 2: Data visualization'
-author: "Tamas Nagy"
+author: "Achilles Isidore Israel"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -32,6 +32,31 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 
 ```{r}
 
+library(tidyverse)
+library(tidytuesdayR)
+
+tt_data <- tidytuesdayR::tt_load("2020-09-22")
+expeditions <- tt_data$expeditions
+
+##Prepare the data: top 15 peaks only, reorder by count
+ expedition_counts <- expeditions %>%
+  mutate(peak_name = fct_lump(peak_name, n = 15)) %>% 
+  filter(peak_name != "Other") %>%            
+  count(peak_name) %>%                        
+  mutate(peak_name = fct_reorder(peak_name, n))                                                                     
+##Plot
+ggplot(expedition_counts, aes(x = peak_name, y = n, fill = peak_name)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_viridis_d() +
+  theme_light() +
+  labs(
+    x = "Peak",
+    y = "Number of Expeditions",
+    title = "Top 15 Peaks by Number of Expeditions"
+  ) +
+  coord_flip()
+
+
 ```
 
 ## Task 2: PhDs awarded
@@ -46,6 +71,31 @@ Notes:
 
 ```{r}
 
+library(tidyverse)
+library(tidytuesdayR)
+library(scales)
+
+phd <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv")
+
+##Summarize total PhDs by year and broad field
+phd_summary <- phd %>%
+  group_by(year, broad_field) %>%
+  summarise(total_phds = sum(n_phds, na.rm = TRUE), .groups = "drop")
+
+##Plot
+ggplot(phd_summary, aes(x = year, y = total_phds, color = broad_field)) +
+  geom_line(size = 1.2) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(labels = comma_format()) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_minimal() +
+  labs(
+    title = "PhDs Awarded by Broad Field Over Time",
+    x = "Year",
+    y = "Number of PhDs",
+    color = "Field"
+  )
+
 ```
 
 ## Task 3: Commute in the US
@@ -57,7 +107,42 @@ Notes:
 -   First you have to aggregate the data to count all commutes by state.
 -   Both axis scales are log transformed and the labels comma formatted, using `scales::comma_format()`
 -   The point size is 2, . The theme is set to light.
-
+  
 ```{r}
+
+library(tidyverse)
+library(scales)
+library(tidytuesdayR)
+library(dplyr)
+library(tidyr)
+
+commute <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv")
+
+##Aggregate the data by state
+commute_by_state_mode <- commute %>%
+  filter(mode %in% c("Bike", "Walk")) %>%
+  group_by(state, mode) %>%
+  summarise(total = sum(n, na.rm = TRUE), .groups = "drop")
+
+commute_by_state_wide <- commute_by_state_mode %>%
+  pivot_wider(names_from = mode, values_from = total)
+
+##Plot
+
+commute_by_state_wide_filtered <- commute_by_state_wide %>%
+  filter(!is.na(Bike), !is.na(Walk), Bike > 0, Walk > 0)
+
+ggplot(commute_by_state_wide_filtered, aes(x = Bike, y = Walk)) +
+  geom_point(size = 2) +
+  scale_x_log10(labels = comma_format()) +
+  scale_y_log10(labels = comma_format()) +
+  labs(
+    title = "Bike vs Walk Commuters by State",
+    x = "Total Bike Commuters (log scale)",
+    y = "Total Walk Commuters (log scale)"
+  ) +
+  theme_light()
+
+
 
 ```
