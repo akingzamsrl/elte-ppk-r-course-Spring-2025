@@ -104,13 +104,58 @@ colSums(is.na(data_B))
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+##Data_A____________________
+##Clean the `sex` variable
+data_A$sex <- tolower(as.character(data_A$sex))
+data_A$sex <- factor(data_A$sex, levels = c("female", "male"))
 
-# Fix incorrect sex coding (e.g., lowercase or typos)
-data_A$sex <- factor(tolower(data_A$sex), levels = c("female", "male"))
+##Clean variable ranges
 
-# Check for cortisol values less than zero and fix
-data_A$cortisol_serum[data_A$cortisol_serum < 0] <- NA
-data_A$cortisol_saliva[data_A$cortisol_saliva < 0] <- NA
+#STAI_trait should be between 20 and 80
+data_A <- data_A %>% mutate(STAI_trait = ifelse(STAI_trait < 20 | STAI_trait > 80, NA, STAI_trait))
+
+#pain_cat should be between 0 and 52
+data_A <- data_A %>% mutate(pain_cat = ifelse(pain_cat < 0 | pain_cat > 52, NA, pain_cat))
+
+#mindfulness should be between 1 and 6
+data_A <- data_A %>% mutate(mindfulness = ifelse(mindfulness < 1 | mindfulness > 6, NA, mindfulness))
+
+#cortisol_serum and cortisol_saliva should not be negative
+data_A <- data_A %>%
+  mutate(
+    cortisol_serum = ifelse(cortisol_serum < 0, NA, cortisol_serum),
+    cortisol_saliva = ifelse(cortisol_saliva < 0, NA, cortisol_saliva)
+  )
+
+##Check for introduced NAs
+colSums(is.na(data_A))
+
+
+##Data_B____________________
+##Clean the `sex` variable
+data_B$sex <- tolower(as.character(data_B$sex))
+data_B$sex <- factor(data_B$sex, levels = c("female", "male"))
+
+##Check for out-of-range or invalid values
+
+#STAI_trait should be between 20 and 80
+data_B <- data_B %>% mutate(STAI_trait = ifelse(STAI_trait < 20 | STAI_trait > 80, NA, STAI_trait))
+
+#pain_cat should be between 0 and 52
+data_B <- data_B %>% mutate(pain_cat = ifelse(pain_cat < 0 | pain_cat > 52, NA, pain_cat))
+
+#mindfulness should be between 1 and 6
+data_B <- data_B %>% mutate(mindfulness = ifelse(mindfulness < 1 | mindfulness > 6, NA, mindfulness))
+
+#cortisol_serum and cortisol_saliva should not be negative
+data_B <- data_B %>%
+  mutate(
+    cortisol_serum = ifelse(cortisol_serum < 0, NA, cortisol_serum),
+    cortisol_saliva = ifelse(cortisol_saliva < 0, NA, cortisol_saliva)
+  )
+
+##Check for NAs introduced
+colSums(is.na(data_B))
 
 ```
 
