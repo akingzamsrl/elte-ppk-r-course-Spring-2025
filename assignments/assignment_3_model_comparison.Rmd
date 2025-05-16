@@ -1,6 +1,6 @@
 ---
 title: "Assignment 3: Model comparison"
-author: "Marton Kovacs"
+author: "Achilles Isidore Israel"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -59,6 +59,20 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
+library(readxl)
+library(ggplot2)
+library(car)
+library(lmtest)
+
+setwd("/Users/achillesisidore/Documents/StatProg/elte-ppk-r-course-Spring-2025/data")
+
+# Read the dataset
+data <- read_excel("assignment_3_dataset.xlsx")
+
+# View the first few rows of the dataset to check
+head(data)
+
+str(data)
 
 ```
 
@@ -70,6 +84,13 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
 
+library(psych)
+library(GGally)
+
+describe(data)
+
+ggpairs(data)
+
 ```
 
 #### Correct coding errors
@@ -77,6 +98,18 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+
+library(dplyr)
+
+# Fixing pain values if they are not within the range 0-10
+data$pain[data$pain < 0 | data$pain > 10] <- NA
+
+# Fixing mindfulness values if they are not within the range 1-6
+data$mindfulness[data$mindfulness < 1 | data$mindfulness > 6] <- NA  
+
+# Replace 'women' with 'female' in the 'sex' variable
+data$sex <- recode(data$sex, "'women' = 'female'")
+
 
 ```
 
@@ -87,6 +120,13 @@ In order to test the more complex model for outliers and to test the assumptions
 
 ```{r}
 
+##Fit the more complex model
+model_complex <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data = data)
+
+##Display the summary of the model
+summary(model_complex)
+
+
 ```
 
 #### Checking for influential outliers
@@ -94,6 +134,13 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+
+##Calculate Cook's distance
+cooksd <- cooks.distance(model_complex)
+
+##Plot Cook's distance
+plot(cooksd, type = "h", main = "Cook's Distance", ylab = "Cook's Distance")
+abline(h = 4 / nrow(data), col = "red")
 
 ```
 
@@ -103,17 +150,28 @@ Check the normality assumption.
 
 ```{r}
 
+##Q-Q plot for normality
+qqnorm(residuals(model_complex))
+qqline(residuals(model_complex), col = "red")
+
 ```
 
 Check the linearity assumption.
 
 ```{r}
 
+##Residuals vs. fitted values plot
+plot(fitted(model_complex), residuals(model_complex), main = "Residuals vs Fitted", xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red")
+
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
+
+##Scale-Location plot
+plot(model_complex, which = 1)
 
 ```
 
@@ -127,6 +185,12 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 
 ```{r}
 
+##Calculate VIF values
+vif_values <- vif(model_complex)
+
+##Display the VIF values
+print(vif_values)
+
 ```
 
 ### Making decision based on model diagnostics
@@ -135,11 +199,42 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 
 ```{r}
 
+##Remoiving cortisol saliva
+model_updated <- update(model_complex, . ~ . - cortisol_saliva)
+
+##Summarize the updated model
+summary(model_updated)
+
+# Recalculate Variance Inflation Factors (VIF) to assess multicollinearity
+library(car)
+vif(model_updated)
+
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+
+##Build the full model
+model_full <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness +
+                   cortisol_serum + cortisol_saliva, data = data)
+
+
+##Calculate Cook's distance
+cooksd <- cooks.distance(model_full)
+influential <- which(cooksd > (4 / nrow(data)))
+data_clean <- data[-influential, ]
+
+##Plot Cook's distance
+plot(cooksd, type = "h", main = "Cook's Distance", ylab = "Cook's Distance")
+abline(h = 4 / nrow(data), col = "red")
+
+# Identify influential rows using Cook's Distance
+threshold <- 4 / nrow(data)
+influential <- which(cooksd > threshold)
+
+# Remove influential rows to create a clean dataset
+data_clean <- data[-influential, ]
 
 ```
 
@@ -149,11 +244,18 @@ Normality assumption
 
 ```{r}
 
+qqnorm(residuals(model_updated))
+qqline(residuals(model_updated), col = "red")
+
 ```
 
 Linearity assumption
 
 ```{r}
+
+##Residuals vs. fitted values plot
+plot(fitted(model_updated), residuals(model_updated), main = "Residuals vs Fitted", xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, col = "red")
 
 ```
 
@@ -161,11 +263,20 @@ Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
 
+##Scale-Location plot
+plot(model_updated, which = 1)
+
 ```
 
 Multicollinearity assumption
 
 ```{r}
+
+##Calculate VIF values
+vif_values <- vif(model_updated)
+
+##Display the VIF values
+print(vif_values)
 
 ```
 
@@ -175,17 +286,49 @@ Create the simple model and get the results of the model that needs to be report
 
 ```{r}
 
+model_simple <- lm(pain ~ age + sex, data = data_clean)
+
+
+
 ```
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
 ```{r}
 
+model_complex <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness +
+                      cortisol_serum + cortisol_saliva, data = data_clean)
+
+
+
 ```
 
 Compare the two models.
 
 ```{r}
+
+# Combine all variables from both models
+vars <- c("age", "sex", "STAI_trait", "pain_cat", "mindfulness", "cortisol_serum", "cortisol_saliva")  
+
+# Create dataset with complete cases on all these vars
+data_clean <- data[complete.cases(data[, vars]), ]
+
+# Fit models on this complete dataset
+model_simple <- lm(pain ~ age + sex, data = data_clean)
+model_complex <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness +
+                      cortisol_serum + cortisol_saliva, data = data_clean)
+
+# Now you can compare models with no error
+
+##Compare models using ANOVA (F-test)
+anova(model_simple, model_complex)
+
+##Compare model fit using AIC
+AIC(model_simple, model_complex)
+
+##Summaries of both models
+summary(model_simple)
+summary(model_complex)
 
 ```
 
