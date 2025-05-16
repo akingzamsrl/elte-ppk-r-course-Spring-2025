@@ -1,6 +1,6 @@
 ---
 title: "Assignment 5: Mixed models"
-author: "Marton Kovacs / Zoltan Kekecs"
+author: "Achilles Isidore Israel"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -59,6 +59,21 @@ Read the datasets used in this assignment. Pay attention to the extensions of th
 
 ```{r}
 
+library(lme4)
+library(lmerTest)
+library(performance)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(Matrix)
+library(haven)
+
+setwd("/Users/achillesisidore/Documents/StatProg/elte-ppk-r-course-Spring-2025/data")
+
+# Read the dataset
+data_A <- read_sav("assignment_4_dataset_A.sav")
+ data_B <- read_sav("assignment_4_dataset_B.sav")
+
 ```
 
 ## Exploratory data analysis
@@ -67,6 +82,21 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
 
+##Check structure and summary of dataset A
+str(data_A)
+summary(data_A)
+
+##Check for missing values
+colSums(is.na(data_A))
+
+##Check structure and summary of dataset B
+str(data_B)
+summary(data_B)
+
+##Check for missing values
+colSums(is.na(data_B))
+
+
 ```
 
 ## Correct coding errors
@@ -74,6 +104,13 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+
+# Fix incorrect sex coding (e.g., lowercase or typos)
+data_A$sex <- factor(tolower(data_A$sex), levels = c("female", "male"))
+
+# Check for cortisol values less than zero and fix
+data_A$cortisol_serum[data_A$cortisol_serum < 0] <- NA
+data_A$cortisol_saliva[data_A$cortisol_saliva < 0] <- NA
 
 ```
 
