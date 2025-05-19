@@ -68,7 +68,8 @@ library(readr)
 library(Matrix)
 library(haven)
 
-setwd("/Users/achillesisidore/Documents/StatProg/elte-ppk-r-course-Spring-2025/data")
+setwd("..")
+setwd(file.path(getwd(), "data"))
 
 # Read the dataset
 data_A <- read_sav("assignment_4_dataset_A.sav")

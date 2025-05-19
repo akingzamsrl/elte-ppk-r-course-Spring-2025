@@ -33,14 +33,8 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 
 ```{r}
 
-setwd("/Users/achillesisidore/Documents/StatProg/elte-ppk-r-course-Spring-2025/assignments")
+cocktail_data <- readr::read_tsv('https://raw.githubusercontent.com/nthun/cocktail-balance/refs/heads/master/cocktail_data.tsv')
 
-# Set the file path
-file_path <- "cocktail_data.tsv"
-print(file_path)
-
-# Read the TSV file
-cocktail_data <- read.delim(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
 # View the first few rows
 head(cocktail_data)

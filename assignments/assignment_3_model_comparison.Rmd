@@ -64,7 +64,8 @@ library(ggplot2)
 library(car)
 library(lmtest)
 
-setwd("/Users/achillesisidore/Documents/StatProg/elte-ppk-r-course-Spring-2025/data")
+setwd("..")
+setwd(file.path(getwd(), "data"))
 
 # Read the dataset
 data <- read_excel("assignment_3_dataset.xlsx")
@@ -88,8 +89,6 @@ library(psych)
 library(GGally)
 
 describe(data)
-
-ggpairs(data)
 
 ```
 
