@@ -1,0 +1,247 @@
+---
+title: "FinalProject"
+author: "Achilles Isidore Israel"
+date: "2025-05-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read the dataset of Pixar Films
+
+```{r}
+
+pixar_films <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-03-11/pixar_films.csv')
+public_response <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-03-11/public_response.csv')
+box_office <- readr::read_csv('https://raw.githubusercontent.com/erictleung/pixarfilms/master/data-raw/box_office.csv')
+```
+
+##Run an exploratory data analysis (EDA) to investigate the dataset.
+
+```{r}
+
+##Load necessary packages
+library(tidyverse)
+library(tidytuesdayR)
+
+##View structure of datasets
+view(pixar_films)
+view(public_response)
+view(box_office)
+
+
+```
+
+Fixing Coding Error
+
+```{r}
+
+##Remove column 27 in the Pixar_films dataset
+pixar_films <- pixar_films[-27, ]
+
+##Replace missing values in running time with 0 (not the mean)
+pixar_films$run_time[is.na(pixar_films$run_time)] <- 0
+
+##Replace missing values in Rotten Tomatoes with 0 (not the mean)
+public_response$rotten_tomatoes[is.na(public_response$rotten_tomatoes)] <- 0
+
+##Replace missing values in Metacritic with 0 (not the mean)
+public_response$metacritic[is.na(public_response$metacritic)] <- 0
+
+##Replace missing values in critics_choice with 0 (not the mean)
+public_response$critics_choice[is.na(public_response$critics_choice)] <- 0
+
+##Replace missing values in cinema_score with N/A
+public_response$cinema_score[is.na(public_response$cinema_score)] <- "N/A"
+
+##Ensure dates and numeric values are correctly typed
+pixar_films$release_date <- as.Date(pixar_films$release_date)
+
+pixar_films$run_time <- as.integer(pixar_films$run_time)
+
+public_response$rotten_tomatoes <- as.integer(public_response$rotten_tomatoes)
+
+public_response$metacritic <- as.integer(public_response$metacritic)
+
+public_response$critics_choice <- as.integer(public_response$critics_choice)
+
+##Match Film Names across datasets (Trim and Clean)
+pixar_films$film <- trimws(pixar_films$film)
+public_response$film <- trimws(public_response$film)
+
+pixar_films$film <- tolower(pixar_films$film)
+public_response$film <- tolower(public_response$film)
+
+box_office_trimmed <- box_office %>%
+  select(film, box_office_worldwide)
+
+box_office_trimmed$film <- tolower(box_office_trimmed$film)
+```
+
+Make one data set adding pixar_films, public_responses, and box_office_worldwide of the box_office data set
+
+```{r}
+
+library(dplyr)
+
+##Ensure Film columns are clean and aligned
+pixar_films <- pixar_films %>%
+  mutate(film = str_trim(film))
+
+public_response <- public_response %>%
+  mutate(film = str_trim(film))
+
+##Join the three datasets
+combined_data <- pixar_films %>%
+  right_join(public_response, by = "film") %>%
+  left_join(box_office_trimmed, by = "film")
+
+```
+
+Add column to find the average of rotten tomatoes, metacritic, and critic's choice 
+```{r}
+
+##Install and Load package/s
+library(purrr)
+library(dplyr)
+
+##Find the average score
+combined_data <- combined_data %>%
+  mutate(
+    average_public_response_score = pmap_dbl(
+      list(rotten_tomatoes, metacritic, critics_choice),
+      function(rt, mc, cc) {
+        scores <- c(rt, mc, cc)
+        valid_scores <- scores[scores > 0 & !is.na(scores)]
+        if (length(valid_scores) == 0) NA else mean(valid_scores)}))
+
+```
+
+Use ggplot for visualization for the Film and Public Response Scores (RT, MC, CC), and the Average Public Response Score but only showing the Top 10 
+
+```{r}
+
+##Load Packages
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+##Get the top 10 films by average_score
+top_10_films <- combined_data %>%
+  arrange(desc(average_score)) %>%
+  slice_head(n = 10) %>%
+  pull(film)
+
+##Filter combined_data to only top 10 films and arrange by descending average_score
+filtered_data <- combined_data %>%
+  filter(film %in% top_10_films) %>%
+  arrange(desc(average_score)) %>%
+  mutate(film = factor(film, levels = unique(film)))
+
+##Split into two groups
+films_first_5 <- levels(filtered_data$film)[1:5]
+films_second_5 <- levels(filtered_data$film)[6:10]
+
+##Prepare data for first 5 films
+first_graph <- filtered_data %>%
+  filter(film %in% films_first_5) %>%
+  select(film, rotten_tomatoes, metacritic, critics_choice, average_score) %>%
+  pivot_longer(
+    cols = c(rotten_tomatoes, metacritic, critics_choice, average_score),
+    names_to = "score_type",
+    values_to = "score"
+  ) %>%
+  mutate(film = factor(film, levels = films_first_5))
+
+##Prepare data for second 5 films
+second_graph <- filtered_data %>%
+  filter(film %in% films_second_5) %>%
+  select(film, rotten_tomatoes, metacritic, critics_choice, average_score) %>%
+  pivot_longer(
+    cols = c(rotten_tomatoes, metacritic, critics_choice, average_score),
+    names_to = "score_type",
+    values_to = "score"
+  ) %>%
+  mutate(film = factor(film, levels = films_second_5))
+
+##Plot the first 5 films
+p1 <- ggplot(first_graph, aes(x = score, y = film, fill = score_type)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Top 5 Pixar Films by Public Rating (1-5)",
+    x = "Score",
+    y = "Film",
+    fill = "Score Type"
+  ) +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10))
+
+##Plot the next 5 films
+p2 <- ggplot(second_graph, aes(x = score, y = film, fill = score_type)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Top 5 Pixar Films by Public Rating (6-10)",
+    x = "Score",
+    y = "Film",
+    fill = "Score Type"
+  ) +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 10))
+
+print(p1)
+print(p2)
+```
+
+Find the relationship between RT, MC, CC and box office performance.
+
+Null Hypothesis: There is no relationship between RT, MC, CC, scores and worldwide box office revenue.
+Alternative Hypothesis: Higher RT, MC, CC, scores are associated with higher worldwide box office revenue.
+
+```{r}
+
+##
+library(zoo)
+
+##Find the relationship
+model <- lm(box_office_worldwide ~ rotten_tomatoes + metacritic + critics_choice, data = combined_data)
+summary(model)
+
+#Check Residual Diagnostic
+par(mfrow = c(2, 2))
+plot(model)
+
+##Check Multicollinearity (Variance Inflation Factor)
+library(car)
+vif(model)
+
+##Check Shapiro-Wilk Test for Normality of Residuals
+shapiro.test(residuals(model))
+
+##Check Breusch-Pagan Test for Heteroscedasticity
+library(lmtest)
+bptest(model)
+
+##Check for Influential Observations (Cook's Distance)
+plot(model, which = 4)
+
+
+```
+Test another hypothesis to check if there a difference in box office worldwide revenue between PG and G films?"
+
+Null Hypothesis: There is no difference in mean worldwide box office revenue between PG and G films.
+Alternative Hypothesis: There is a difference in mean worldwide box office revenue between PG and G films.
+
+```{r}
+
+library(dplyr)
+
+pg_g_data <- combined_data %>%
+  filter(film_rating %in% c("G", "PG"), !is.na(box_office_worldwide))
+
+t.test(box_office_worldwide ~ film_rating, data = pg_g_data)
+
+```
