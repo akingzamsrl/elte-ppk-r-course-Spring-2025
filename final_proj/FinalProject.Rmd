@@ -117,6 +117,11 @@ combined_data <- combined_data %>%
         valid_scores <- scores[scores > 0 & !is.na(scores)]
         if (length(valid_scores) == 0) NA else mean(valid_scores)}))
 
+##Top 10
+top_10 <- combined_data %>%
+  arrange(desc(average_public_response_score)) %>%
+  slice_head(n = 10)
+
 ```
 
 Use ggplot for visualization for the Film and Public Response Scores (RT, MC, CC), and the Average Public Response Score but only showing the Top 10 
@@ -130,14 +135,14 @@ library(dplyr)
 
 ##Get the top 10 films by average_score
 top_10_films <- combined_data %>%
-  arrange(desc(average_score)) %>%
+  arrange(desc(average_public_response_score)) %>%
   slice_head(n = 10) %>%
   pull(film)
 
 ##Filter combined_data to only top 10 films and arrange by descending average_score
 filtered_data <- combined_data %>%
   filter(film %in% top_10_films) %>%
-  arrange(desc(average_score)) %>%
+  arrange(desc(average_public_response_score)) %>%
   mutate(film = factor(film, levels = unique(film)))
 
 ##Split into two groups
@@ -147,9 +152,9 @@ films_second_5 <- levels(filtered_data$film)[6:10]
 ##Prepare data for first 5 films
 first_graph <- filtered_data %>%
   filter(film %in% films_first_5) %>%
-  select(film, rotten_tomatoes, metacritic, critics_choice, average_score) %>%
+  select(film, rotten_tomatoes, metacritic, critics_choice, average_public_response_score) %>%
   pivot_longer(
-    cols = c(rotten_tomatoes, metacritic, critics_choice, average_score),
+    cols = c(rotten_tomatoes, metacritic, critics_choice, average_public_response_score),
     names_to = "score_type",
     values_to = "score"
   ) %>%
@@ -158,9 +163,9 @@ first_graph <- filtered_data %>%
 ##Prepare data for second 5 films
 second_graph <- filtered_data %>%
   filter(film %in% films_second_5) %>%
-  select(film, rotten_tomatoes, metacritic, critics_choice, average_score) %>%
+  select(film, rotten_tomatoes, metacritic, critics_choice, average_public_response_score) %>%
   pivot_longer(
-    cols = c(rotten_tomatoes, metacritic, critics_choice, average_score),
+    cols = c(rotten_tomatoes, metacritic, critics_choice, average_public_response_score),
     names_to = "score_type",
     values_to = "score"
   ) %>%
